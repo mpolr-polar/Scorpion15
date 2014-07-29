@@ -454,9 +454,9 @@ void Obstacle(void)
 		}
 	}else{
 		switch(scorpion.Oflag){
-//		case 0:	//障害物のフラグが立っていなかったとき
+		case 0:	//障害物のフラグが立っていなかったとき
 //			scorpion.mode=0;
-//			break;
+			break;
 		case 1://右に障害物があるフラグが立っていたとき
 			if(ping.centi_cur[P_RIGHT]<DISTANCE){//右に障害物が接近しているとき
 				right=OSPEED;

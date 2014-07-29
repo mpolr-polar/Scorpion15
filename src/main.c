@@ -34,20 +34,11 @@
  */
 int main(void)
 {
-/*	System_Configuration(active_all);
-	while(scorpion.mode != 5)
-	{
-		SetUp();
-		(*MainProcess[socprion.mode])(void);
-		CleanUp();
-	}
-*/
-	/*　モジュールテストプログラム */
-	System_Configuration(linetrace);
+	System_Configuration(active_all);
 	while(1)
 	{
-		(*ControlProcess[5])();
-		(*MainProcess[0])();
+		(*MainProcess[scorpion.mode])();
+		(*ControlProcess[scorpion.mode])();
 		if(scorpion.mode > 5){break;}
 	}
 	return 0;

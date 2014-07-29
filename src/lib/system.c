@@ -173,8 +173,7 @@ void Linetrace(void)
 	}
 
 	//error:ラインから外れた時にmotor.Rdutyに補正を加える
-	//addsp:直線の時、motor.Mdutyに補正を加える。(motor.Rdutyの最大値は100)
-	static uint8_t error=0,addsp=0;
+	static uint8_t error=0;
 	static int8_t  turn=0;
 	switch(line.dec_cur)
 	{
@@ -183,7 +182,6 @@ void Linetrace(void)
 		{
 			Move(0,0);
 			error = 0;
-			addsp = 0;
 		}else
 		{
 			error++;
@@ -207,7 +205,6 @@ void Linetrace(void)
 		{
 			if((line.dec_cur>0&&turn<0)||(line.dec_cur<0&&turn>0)){motor.Rduty=0;}
 			turn = line.dec_cur/ABS(line.dec_cur);
-			if(addsp){addsp=0;}
 			motor.Rduty += line.dec_cur*ABS(line.dec_cur);
 			motor.Mduty = 80-line.dec_cur*10;
 			Move(motor.Rduty,motor.Mduty);
@@ -217,14 +214,12 @@ void Linetrace(void)
 			{
 				if((line.dec_cur>0&&turn<0)||(line.dec_cur<0&&turn>0)){motor.Rduty=0;}
 				turn = line.dec_cur/ABS(line.dec_cur);
-				if(addsp>20){addsp=20;}
-				Move(0,80+addsp);
-				addsp+=2;
+				Move(0,100);
 				motor.Rduty = 0;
 			}else
 			{
 				turn=0;
-				Move(line.dec_cur*ABS(line.dec_cur),80);
+				Move(25*line.dec_cur/ABS(line.dec_cur),25);
 			}
 		}
 		break;
@@ -234,7 +229,350 @@ void Linetrace(void)
 
 void Obstacle(void)
 {
+	static int16_t	right;
+	static int16_t	left;
 
+	GetSensorData(PING|TOUCH);										//ここでセンサーデータを読む
+
+	if(touch.cur!=0){
+		switch(touch.cur){
+		case left_touch://左のタッチセンサーが反応したとき
+
+			switch(scorpion.Oflag){
+			case 0:	//障害物のフラグが立っていなかったとき
+//				if(scorpRduty<0)//左に曲がろうとしていたとき;
+
+				if(ping.centi_cur[FRONT]<DISTANCE){
+					Brake(both_motors);
+					delay_ms(1000);
+
+					RotateMotor(-OSPEED,-OSPEED);
+					delay_ms(BACKING);
+					Brake(both_motors);
+					delay_ms(500);
+					GetSensorData(PING);
+
+					if(ping.cur[RIGHT]<ping.cur[LEFT]){
+						RotateMotor(-OSPEED,OSPEED);
+						delay_ms(TURNING);
+						Brake(both_motors);
+						delay_ms(1000);
+						scorpion.Oflag=1;
+					}else{
+						RotateMotor(OSPEED,-OSPEED);
+						delay_ms(TURNING);
+						Brake(both_motors);
+						delay_ms(1000);
+						scorpion.Oflag=-1;
+					}
+				}else{
+					right=-OSPEED;
+					left=0;
+					break;
+				}
+			case 1://右に障害物があるフラグが立っていたとき
+				if(ping.centi_cur[FRONT]<DISTANCE){	//	前に障害物がある
+					scorpion.Oflag=0;
+					goto frontlabel;
+				}
+				if(ping.centi_cur[P_RIGHT]>=DISTANCE){//右側に障害物が接近してなかったとき
+					right=-OSPEED;
+					left=0;
+				}else{											//接近していたとき
+					scorpion.Oflag=2;
+					 right=-OSPEED;
+					 left=0;
+				}
+				break;
+			case -1://左に障害物があるフラグが立っていたとき
+				right=-OSPEED;
+				left=0;
+				break;
+			case 10://右旋回中のフラグが立っていたとき
+				right=-OSPEED;
+				left=0;
+				break;
+			case -10://左旋回中のフラグが立っていたとき
+				scorpion.Oflag=2;
+				right=-OSPEED;
+				left=0;
+				break;
+			case 2://両側に障害物があるフラグが立っていたとき
+				right=-OSPEED;
+				left=0;
+				break;
+			default:
+				right=0;
+				left=0;
+				break;
+			}
+
+			break;
+		case right_touch://右のタッチセンサーが反応したとき
+
+			switch(scorpion.Oflag){
+			case 0://障害物のフラグが立っていなかったとき
+//				if(scorpion.Rduty>=0)//右に曲がろうとしていたとき;
+
+				if(ping.centi_cur[FRONT]<DISTANCE){
+					Brake(both_motors);
+					delay_ms(1000);
+					RotateMotor(-OSPEED,-OSPEED);
+					delay_ms(BACKING);
+					Brake(both_motors);
+					GetSensorData(PING);
+
+					if(ping.cur[RIGHT]<ping.cur[LEFT]){
+						RotateMotor(-OSPEED,OSPEED);
+						delay_ms(TURNING);
+						Brake(both_motors);
+						delay_ms(1000);
+						scorpion.Oflag=1;
+					}else{
+						RotateMotor(OSPEED,-OSPEED);
+						delay_ms(TURNING);
+						Brake(both_motors);
+						delay_ms(1000);
+						scorpion.Oflag=-1;
+					}
+				}else{
+					right=0;
+					left=-OSPEED;
+					break;
+				}
+			case 1://右に障害物があるフラグが立っていたとき
+				right=0;
+				left=-OSPEED;
+				break;
+			case -1:///左に障害物があるフラグが立っていたとき
+				if(ping.centi_cur[FRONT]<DISTANCE){	//	前に障害物がある
+					scorpion.Oflag=0;
+					goto frontlabel;
+				}
+				if(ping.centi_cur[P_LEFT]>=DISTANCE){//左側に障害物が接近してなかったとき
+					right=0;
+					left=-OSPEED;
+				}else{											//接近していたとき
+					scorpion.Oflag=2;
+					 right=0;
+					 left=-OSPEED;
+				}
+				break;
+			case 10://右旋回中のフラグが立っていたとき
+				scorpion.Oflag=2;
+				right=0;
+				left=-OSPEED;
+				break;
+			case -10://左旋回中のフラグが立っていたとき
+				right=0;
+				left=-OSPEED;
+				break;
+			case 2:	//両側に障害物がある
+				right=0;
+				left=-OSPEED;
+				break;
+			default:
+				right=0;
+				left=0;
+				break;
+			}
+
+			break;
+		default://両方のタッチセンサーが反応したとき
+			if(ping.centi_cur[P_FRONT]<DISTANCE){	//距離センサーで前にあるかどうかチェック
+
+				frontlabel:
+				switch(scorpion.Oflag){
+				case 0://障害物のフラグが立っていなかったとき
+					Brake(both_motors);
+					delay_ms(1000);
+					RotateMotor(-OSPEED,-OSPEED);
+					delay_ms(BACKING);
+					Brake(both_motors);
+					delay_ms(500);
+					GetSensorData(PING);
+
+					if(ping.cur[RIGHT]<ping.cur[LEFT]){
+						RotateMotor(-OSPEED,OSPEED);
+						delay_ms(TURNING);
+						Brake(both_motors);
+						delay_ms(1000);
+						scorpion.Oflag=1;
+					}else{
+						RotateMotor(OSPEED,-OSPEED);
+						delay_ms(TURNING);
+						Brake(both_motors);
+						delay_ms(1000);
+						scorpion.Oflag=-1;
+					}
+
+					break;
+				case 1://右に障害物があるフラグが立っていたとき
+					right=0;
+					left=-OSPEED;
+					break;
+				case -1://左に障害物があるフラグが立っていたとき
+					right=-OSPEED;
+					left=0;
+					break;
+				case 10://右旋回中のフラグが立っていたとき
+					right=0;
+					left=0;
+					break;
+				case -10://左旋回中のフラグが立っていたとき
+					right=-OSPEED;
+					left=0;
+					break;
+				case 2:
+					if(ping.centi_cur[P_RIGHT]>DISTANCE){//右に障害物が接近していないとき
+						scorpion.Oflag=-1;
+						right=-OSPEED;
+						left=0;
+					}else{										//接近しているとき
+						if(ping.centi_cur[P_LEFT]>DISTANCE){//左に障害物が接近していないとき
+							scorpion.Oflag=1;
+							right=0;
+							left=-OSPEED;
+						}else{										//接近しているとき(袋小路)
+							right=-OSPEED;
+							left=-OSPEED;
+						}
+					}
+					break;
+				default:
+					right=0;
+					left=0;
+					break;
+				}
+			}else{								//前に障害物がなかったとき,つまり両側に障害物があるとき
+				scorpion.Oflag=2;
+				right=OSPEED;
+				left=OSPEED;
+			}
+
+			break;
+		}
+	}else{
+		switch(scorpion.Oflag){
+//		case 0:	//障害物のフラグが立っていなかったとき
+//			scorpion.mode=0;
+//			break;
+		case 1://右に障害物があるフラグが立っていたとき
+			if(ping.centi_cur[P_RIGHT]<DISTANCE){//右に障害物が接近しているとき
+				right=OSPEED;
+				left=OSPEED/4;
+			}else{
+				if(ping.centi_cur[P_RIGHT]>DISTANCE){//接近していないとき
+					right=OSPEED/2;
+					left=OSPEED;
+				}else{										//ジャスト!
+					right=OSPEED;
+					left=OSPEED;
+				}
+			}
+			if(line.bin_cur&0b00001111){//ラインが右側に検出されたとき
+				Brake(both_motors);
+				delay_ms(100);
+				RotateMotor(OSPEED,OSPEED);
+				delay_ms(LBACKING);
+				Brake(both_motors);
+				delay_ms(100);
+				RotateMotor(-OSPEED,OSPEED);
+				delay_ms(BACKLINE);
+				Brake(both_motors);
+				delay_ms(100);
+				scorpion.Oflag=0;
+			}
+			break;
+		case -1://左に障害物があるフラグが立っていたとき
+			if(ping.centi_cur[P_LEFT]<DISTANCE){//左に障害物が接近しているとき
+				right=OSPEED/4;
+				left=OSPEED;
+			}else{
+				if(ping.centi_cur[P_LEFT]>DISTANCE){//接近していないとき
+					right=OSPEED;
+					left=OSPEED/2;
+				}else{										//ジャスト!
+					right=OSPEED;
+					left=OSPEED;
+				}
+			}
+			if(line.bin_cur& 0b11110000){//ラインが左側に検出されたとき
+				Brake(both_motors);
+				delay_ms(100);
+				RotateMotor(OSPEED,OSPEED);
+				delay_ms(LBACKING);
+				Brake(both_motors);
+				delay_ms(100);
+				RotateMotor(OSPEED,-OSPEED);
+				delay_ms(BACKLINE);
+				Brake(both_motors);
+				delay_ms(100);
+				scorpion.Oflag=0;
+			}
+			break;
+		case 10://右旋回中のフラグが立っていたとき
+			if(ping.centi_cur[P_LEFT]<DISTANCE){//左側に障害物が接近しているとき
+				scorpion.Oflag=-1;
+				right=OSPEED;
+				left=OSPEED/4;
+			}else{
+				right=-OSPEED;
+				left=0;
+			}
+
+			break;
+		case -10://左旋回中のフラグが立っていたとき
+			if(ping.centi_cur[P_RIGHT]<DISTANCE){//右側に障害物が接近しているとき
+				scorpion.Oflag=1;
+				right=OSPEED/4;
+				left=OSPEED;
+			}else{
+				right=0;
+				left=-OSPEED;
+			}
+			break;
+		case 2://両側に障害物があるフラグが立っていたとき
+			if(ping.centi_cur[P_RIGHT]>DISTANCE){//右側に障害物が接近していないとき
+				if(ping.centi_cur[P_LEFT]>DISTANCE){//左側も接近していないとき
+					if(line.bin_cur!=0)
+						scorpion.Oflag=0;
+					right=OSPEED;
+					left=OSPEED;
+				}else{										//左は接近しているとき
+					scorpion.Oflag=-1;
+					right=OSPEED;
+					left=0;
+				}
+			}else{										//右側に障害物が接近しているとき
+				if(ping.centi_cur[P_LEFT]>DISTANCE){//左側は接近していないとき
+					scorpion.Oflag=1;
+					right=0;
+					left=OSPEED;
+				}else{										//左も接近しているとき
+					if(ping.cur[P_RIGHT]>ping.cur[P_LEFT]){//↓広い方に移動↓
+						right=0;
+						left=OSPEED;
+					}else{
+						if(ping.cur[P_RIGHT]<ping.cur[P_LEFT]){
+							right=OSPEED;
+							left=0;
+						}else{
+							right=OSPEED;
+							left=OSPEED;
+						}
+					}
+				}
+			}
+			break;
+		default:
+			right=0;
+			left=0;
+			break;
+		}
+	}
+	RotateMotor(left,right);										//実際にモーターを動かすのはここ(回り込みなどの例外は除く)
+//	scorpion.mode = 1;
 }
 
 void Passage(void)
@@ -268,9 +606,10 @@ void WakeUp(void)
 
 	if(line.dec_cur == NO_LINE)
 	{
-		Move(0,80);
+		Move(0,100);
 		while(Get_Line(All_Line)==0);
 	}
+	scorpion.mode = 0;//linetrace
 }
 
 void (*MainProcess[])(void) = {
@@ -279,21 +618,34 @@ void (*MainProcess[])(void) = {
 
 
 /*コントロールプロセス(分岐)*/
-void Linetrace_cp(void){}
+void Linetrace_cp(void)
+{
+	//障害物への移行
+	if(touch.cur!=nothing)
+	{
+		if((scorpion.motor_status|TURN_RIGHT)&&touch.cur==right_touch)
+		{
+			scorpion.Oflag = 1;
+		}else if((scorpion.motor_status|TURN_LEFT)&&touch.cur==left_touch)
+		{
+			scorpion.Oflag = -1;
+		}
+		scorpion.mode = 1;
+	}
+}
 
-void Obstacle_cp(void){}
+void Obstacle_cp(void)
+{
+	if(scorpion.Oflag==0 && touch.cur==nothing)
+	{
+		scorpion.mode = 0;
+	}
+}
 
 void Passage_cp(void){}
 
 void Downhill_cp(void){}
 
-void Shelter_cp(void){}
-
-void WakeUp_cp(void)
-{
-	scorpion.mode = 0;//linetrace
-}
-
 void (*ControlProcess[])(void) = {
-	Linetrace_cp,Obstacle_cp,Passage_cp,Downhill_cp,Shelter_cp,WakeUp_cp
+	Linetrace_cp,Obstacle_cp,Passage_cp,Downhill_cp,NULL,NULL
 };

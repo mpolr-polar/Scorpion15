@@ -24,6 +24,7 @@ typedef struct userswitch_tag{
 typedef struct option{
 	uint8_t wakeup_mode;		//起動モード
 	int8_t  mode;				//制御モード
+	int8_t	Oflag;				//障害物検出のフラグ
 	uint8_t enabled_sensers;	//起動されたセンサー
 	uint8_t enabled_modules;	//起動されたモジュール
 	uint8_t motor_status;		//モーターの状態
@@ -31,9 +32,21 @@ typedef struct option{
 }System_StatusTypeDef;
 
 typedef struct save_point{
-	uint16_t cmps;		//初期地点で向いている方角を0とする。(4πrad = 3600)
+	uint16_t cmps;		//初期地点で向いている方角を0とする。(4πrad = 3600)(下にラインが引かれていない限り、cmps値が0の向きでpingを測る)
 	uint16_t ping[4];	//その地点、その向きでのPINGの値(cm) (0:front_pintg  1:right_ping  2:back_ping  3:left_ping)
+	uint16_t tag;		//その地点の場所(例 : スタート地点、２つ目の部屋の始点 etc...)
 }POINT_DataTypeDef;
+
+typedef enum savepoint_tag{
+	ENTRANCE		= 0b00000001,	//エリアの始点
+	OBSTACLE		= 0b00000010,	//障害物の場所
+	FIRST_ROOM		= 0b00000100,	//最初の部屋
+	SECOND_ROOM 	= 0b00001000,	//２つ目の部屋
+	PASSAGE			= 0b00010000,	//通路
+	HIGH_LANDING	= 0b00100000,	//下り坂の前の踊り場
+	LOW_LANDING		= 0b01000000,	//上り坂の前の踊り場
+	LAST_ROOM		= 0b10000000	//避難部屋
+}SAVEPOINT_TAG;
 
 typedef enum wakeup_mode{
 	active_all,		//本番
@@ -67,10 +80,26 @@ typedef enum Motor_Status{
 }MOTOR_STATUS;
 
 //ローパスフィルター(現在の値と前回の値が必要)
+#define NULL ((void*)0)
 #define LowPass_Filter(value,past_value)	(((past_value)*4 + (value)*6)/10);
 #define OnBoardSwitch()						((GPIOA->IDR&1)?(SET):(RESET))
 #define ABS(x)		((x<0)?(-x):(x))
 #define SAVE_POINT	10
+
+#define	FRONT	front_ping
+#define	RIGHT	right_ping
+#define	LEFT	left_ping
+#define	BACK	back_ping
+#define OSPEED	50
+#define	P_FRONT	front_ping
+#define	P_RIGHT	right_ping
+#define	P_LEFT	left_ping
+#define	P_BACK	back_ping
+#define DISTANCE	7//cm
+#define BACKING 200
+#define TURNING	3000
+#define BACKLINE 2500
+#define	LBACKING 400
 
 extern void System_Configuration(uint8_t mode);
 extern void Debug(uint8_t device);
@@ -89,6 +118,7 @@ extern void Passage(void);				//通路・上り坂	2
 extern void Downhill(void);				//下り坂		3
 extern void Shelter(void);*/			//避難部屋	4
 extern void (*MainProcess[])(void);		//各モードのサブルーチンの配列
+extern void (*ControlProcess[])(void);	//各モードの処理分岐
 
 extern USERSWITCH_InitTypeDef	user;
 extern System_StatusTypeDef		scorpion;

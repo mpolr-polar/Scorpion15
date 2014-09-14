@@ -34,7 +34,8 @@
 typedef enum COLOR_pos{
 	right_color = 1,//1
 	left_color,		//2
-	center_color	//3
+	center_color,	//3
+	silver
 }Cpos;
 
 typedef enum color_pos{

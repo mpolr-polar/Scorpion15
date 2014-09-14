@@ -24,4 +24,6 @@ extern void PING_Read();						//PING全読み(非最適化)
 extern void	PING_Read2(const uint8_t ping_num);	//指定されたPINGだけを読む
 extern void PING_Read_ast();					//PING全読み(最適化)   ←推奨
 
+//PING : Ultrasonic Distance Sensor
+
 #endif /* PING_H_ */

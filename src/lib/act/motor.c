@@ -91,11 +91,10 @@ void RotateMotor(int16_t left, int16_t right)
 	Brake(flag);
 
 	if(GPIO_ReadInputDataBit(GPIOE,GPIO_Pin_4)==0){
-		GPIO_ResetBits(GPIOE,GPIO_Pin_7|GPIO_Pin_8|GPIO_Pin_9|GPIO_Pin_10);
+		GPIO_SetBits(GPIOE,GPIO_Pin_7|GPIO_Pin_8|GPIO_Pin_9|GPIO_Pin_10);
 		TIM_OCInitStructure.TIM_Pulse = 0;
 		TIM_OCLInit(TIM9,&TIM_OCInitStructure);
 		TIM_OCLPreloadConfig(TIM9,TIM_OCPreload_Disable);
-
 		TIM_OCInitStructure.TIM_Pulse = 0;
 		TIM_OCRInit(TIM9,&TIM_OCInitStructure);
 		TIM_OCRPreloadConfig(TIM9,TIM_OCPreload_Disable);

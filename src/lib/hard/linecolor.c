@@ -7,6 +7,8 @@
 
 #include "linecolor.h"
 
+
+
 GPIO_InitTypeDef GPIO_InitStructure;
 int8_t LineValue[7] =
 {
@@ -123,7 +125,27 @@ void Color_Configuration()
 
 void Color_Read()
 {
-
+	uint8_t i=0,j=0;
+	GPIOD->ODR &= ~(CLK|RANGE|GATE);
+	delay_us(2000);
+	GPIOD->ODR |= GATE;
+	delay_ms(10);
+	GPIOD->ODR &= ~GATE;
+	delay_us(4);
+	for(i=0;i<3;i++)
+	{
+		for(j=0;j<12;j++)
+		{
+			GPIOD->ODR |= CLK;
+			color.cru_cur[0][i] |= ((GPIOD->IDR&DOUT1)>>10)<<j;
+			color.cru_cur[1][i] |= ((GPIOD->IDR&DOUT2)>>11)<<j;
+			color.cru_cur[2][i] |= ((GPIOD->IDR&DOUT3)>>12)<<j;
+			delay_25ns(10);
+			GPIOD->ODR &= ~CLK;
+			if(j<11){delay_25ns(10);}
+		}
+		delay_us(3);
+	}
 }
 
 uint8_t	Translate_Color(uint8_t color)

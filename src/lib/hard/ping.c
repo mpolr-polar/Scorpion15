@@ -138,11 +138,9 @@ void	PING_Read_ast(void)
 {
 	ping_flag = 1;
 	uint8_t i;
-	for(i=0; i<4; i++)
-	{
+	for(i=0; i<4; i++){
 		ping.log[i] = ping.cur[i];
 	}
-
 	/* Configure Variables */
 	read_flag = 0;
 	TIM_SetCounter(TIM4, 60000);
@@ -176,9 +174,9 @@ void	PING_Read_ast(void)
 		}
 	}
 	TIM_Cmd(TIM4, DISABLE);
-	for(i=0; i<4; i++)
-	{
+	for(i=0; i<4; i++){
 		ping.cur[i] = LowPass_Filter(ping_val[i],ping.log[i]);
+		ping.centi_cur[i] = (uint16_t)((ping.cur[i]+186)/122);
 	}
 }
 

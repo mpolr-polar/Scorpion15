@@ -30,10 +30,10 @@ typedef struct line_tag{
 typedef struct color_tag{
 	uint16_t cru_cur[3][3];	//現在の生データ(10進数)
 	uint16_t cru_log[3][3];	//1ループ前の生データ(10進数)
-	uint8_t  bin_cur;		//現在のカラーセンサの値(2進数,3bit)
-	uint8_t  bin_log;		//1ループ前のカラーセンサの値(2進数,3bit)
-	int8_t   dec_cur;		//現在のカラーセンサの値(10進数, 0:nothing 1:right_color 2:left_color 3:center_color)
-	int8_t   dec_log;		//1ループ前のカラーセンサの値(10進数, 0:nothing 1:right_color 2:left_color 3:center_color)
+	uint8_t  bin_cur;		//現在のカラーセンサの値(2進数,4bit)
+	uint8_t  bin_log;		//1ループ前のカラーセンサの値(2進数,4bit)
+	int8_t   dec_cur;		//現在のカラーセンサの値(10進数, 0:nothing 1:right_color 2:left_color 3:center_color 4:silver)
+	int8_t   dec_log;		//1ループ前のカラーセンサの値(10進数, 0:nothing 1:right_color 2:left_color 3:center_color 4:silver)
 }COLOR_InputTypeDef;
 
 typedef struct ping_tag{
@@ -58,7 +58,21 @@ typedef enum Sensor{
 
 //グローバル関数・変数
 extern void	InitSensor(uint8_t param);		//センサ初期化
+/*	--param--
+ * 	ALL_SENSOR : すべてのセンサを初期化する
+ * 	LINE : ラインセンサを初期化する
+ * 	COLOR : カラーセンサを初期化する
+ * 	TOUCH : タッチセンサを初期化する
+ */
+
 extern void	GetSensorData(uint8_t param);	//センサの入力値を処理
+/*	--param--
+ * 	ALL_SENSOR : すべてのセンサの入力値を各構造体に格納する
+ * 	LINE : ラインセンサの入力値を構造体に格納する
+ * 	COLOR : カラーセンサの入力値を構造体に格納する
+ * 	TOUCH : タッチセンサの入力値を構造体に格納する
+ */
+
 extern LINE_InputTypeDef	line;
 extern COLOR_InputTypeDef	color;
 extern TOUCH_InputTypeDef	touch;

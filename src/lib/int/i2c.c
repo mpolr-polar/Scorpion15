@@ -9,6 +9,7 @@
 
 //初期化用構造体
 GPIO_InitTypeDef GPIO_InitStructure;
+I2C_InitTypeDef		I2C_InitStructure;
 int addresssend[3];
 int busycheckflag[3]={1,1,1};
 int transmitter[3]={0,0,0};
@@ -23,114 +24,75 @@ void I2C_Configuration(){
 	GPIO_InitStructure.GPIO_Mode	= GPIO_Mode_AF;
 	GPIO_InitStructure.GPIO_Speed	= GPIO_Speed_100MHz;
 	GPIO_InitStructure.GPIO_OType	= GPIO_OType_OD;
-	GPIO_InitStructure.GPIO_PuPd	= GPIO_PuPd_NOPULL;
+	GPIO_InitStructure.GPIO_PuPd	= GPIO_PuPd_UP;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
-	I2C_Cmd(I2C1, ENABLE);
 
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_I2C1);
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_I2C1);
-}
 
-void I2C_Start()
-{
-	if(busycheckflag[0]){
-		while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
-	   busycheckflag[0] = 0;
-	}
-	I2C_GenerateSTART(I2C1, ENABLE);
-	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
-	addresssend[0] = 1;
-}
-
-void I2C_Stop()
-{
-	if(transmitter[0])I2C_GenerateSTOP(I2C2, ENABLE);
-	else I2C_AcknowledgeConfig(I2C2, ENABLE);
-	addresssend[1] = 0;
-	busycheckflag[1] = 1;
-}
-
-int8_t	I2C_WriteByte(uint8_t dat)
-{
-	//アドレスを送信
-	if(addresssend[1]){
-		if(dat%2 == 0){
-			I2C_Send7bitAddress(I2C1, dat, I2C_Direction_Transmitter);
-	        transmitter[1]=1;
-	        while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
-	    }else{
-	        I2C_Send7bitAddress(I2C1, dat&0xfe, I2C_Direction_Receiver);
-	        transmitter[1]=0;
-	        while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
-		   }
-	    addresssend[1]=0;
-	}
-	//データを送信
-	else{
-		I2C_SendData(I2C1, (uint8_t)(dat));
-		while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
-	}
-	return 0;
-}
-
-uint8_t	I2C_ReadByte(char noack)
-{
-	uint8_t data;
-	if(noack){
-		I2C_AcknowledgeConfig(I2C1, DISABLE);
-	    I2C_GenerateSTOP(I2C1, ENABLE);
-	}
-	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED)){}
-	data = I2C_ReceiveData(I2C1);
-
-	return data;
+	I2C_InitStructure.I2C_Mode					= I2C_Mode_I2C;
+	I2C_InitStructure.I2C_DutyCycle				= I2C_DutyCycle_16_9;
+	I2C_InitStructure.I2C_Ack					= I2C_Ack_Enable;
+	I2C_InitStructure.I2C_AcknowledgedAddress	= I2C_AcknowledgedAddress_7bit;
+	I2C_InitStructure.I2C_ClockSpeed			= 100000;
+	I2C_Init(I2C1, &I2C_InitStructure);
+	I2C_Cmd(I2C1, ENABLE);
 }
 
 void	Cmps_Init()
 {
-	delay_ms(300);
-	uint8_t flag = 0;
-	//CMPS setup
-	I2C_Start();
-	if(I2C_WriteByte(0x42 + 0) == 0)
-	{
-		I2C_WriteByte('G');
-		I2C_WriteByte(0x74);
-		I2C_WriteByte(0x70);
-		flag = 1;
-	}
-	I2C_Stop();
+	while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	I2C_GenerateSTART(I2C1, ENABLE);
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
+	delay_ms(10);
+	I2C_Send7bitAddress(I2C1, 0x42, I2C_Direction_Transmitter);
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
+	I2C_SendData(I2C1, 'G');
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	I2C_SendData(I2C1, 0x74);
+    while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	I2C_SendData(I2C1, 0x70);
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	I2C_GenerateSTOP(I2C1, ENABLE);
+
+/*	//ポーリング処理
+	__IO uint16_t SR1_Tmp= 0;
+	__IO uint32_t polling_count = 0;
+	do{
+		I2C_GenerateSTART(I2C1, ENABLE);
+		SR1_Tmp = I2C_ReadRegister(I2C1, I2C_Register_SR1);
+		I2C_Send7bitAddress(I2C1, 0x42, I2C_Direction_Transmitter);
+		polling_count++;
+	}while(!I2C_ReadRegister(I2C1, I2C_Register_SR1 & 0x0002));
+	I2C_ClearFlag(I2C1, I2C_FLAG_AF);
+	I2C_GenerateSTOP(I2C1, ENABLE);*/
 }
 
-int16_t Cmps_Get()
+uint16_t Cmps_Read()
 {
-	int16_t cmps = 0;
-	I2C_Start();
-	if(I2C_WriteByte(0x42 + 0) == 0)
-	{
-		I2C_WriteByte('A');
-	}else
-	{
-		cmps = -1;
-	}
-	I2C_Stop();
-	if(cmps>=0)
-	{
-		delay_ms(1);
-		I2C_Start();
-		if(I2C_WriteByte(0x42 + 1) == 0)
-		{
-			cmps = (I2C_ReadByte(0) << 8);
-			cmps += I2C_ReadByte(1);
-		}else
-		{
-			I2C_Stop();
-		}
-	}
-	return cmps;
+	uint16_t data;
+	I2C_AcknowledgeConfig(I2C1, ENABLE);
+	while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY));
+	I2C_GenerateSTART(I2C1, ENABLE);
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
+	I2C_Send7bitAddress(I2C1, 0x42, I2C_Direction_Transmitter);
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
+	I2C_SendData(I2C1, (uint8_t)('A'));
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	I2C_GenerateSTART(I2C1, ENABLE);
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
+	I2C_Send7bitAddress(I2C1, 0x42, I2C_Direction_Receiver);
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
+	data = I2C_ReceiveData(I2C1)<<8;
+	I2C_AcknowledgeConfig(I2C1, DISABLE);
+	I2C_GenerateSTOP(I2C1, ENABLE);
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED));
+	data += I2C_ReceiveData(I2C1);
+	return data;
 }
 
-int16_t	Cmps_Shift(int16_t data,int16_t shift)
+int16_t	Cmps_Shift(uint16_t data,int16_t shift)
 {
 	if(shift < 0)
 	{

@@ -10,6 +10,8 @@
 
 #include "lib/hard.h"
 
+#define Get_Touch()	((GPIOB->IDR&0x1800)>>11)
+
 //構造体に格納される入力データ
 typedef enum touch_pos{
 	nothing,	//0

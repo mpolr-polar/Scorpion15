@@ -11,6 +11,7 @@
 static uint8_t gyro_buf[6];
 GPIO_InitTypeDef GPIO_InitStructure;
 SPI_InitTypeDef SPI_InitStructure;
+int16_t acc_data[5];
 
 void SPI_Configuration()
 {
@@ -68,8 +69,7 @@ void SPI_Deselect(uint16_t SPI_NSS_Pin)
 
 void Accel_Init()
 {
-	Accel_Write(0x16, 0b01010101);
-	Accel_SetOffset(+20, +82, -357);
+	Accel_Write(0x16, 0b01011001);
 }
 
 void Accel_Write(uint8_t add, uint8_t val)
@@ -85,14 +85,22 @@ void Accel_Write(uint8_t add, uint8_t val)
 
 int8_t Accel_Read(uint8_t add)
 {
-	SPI_Select(SPI_NSS_ACC);
+	uint8_t i=0;
+/*	SPI_Select(SPI_NSS_ACC);
 	uint8_t RxData;
 
 	RxData = SPI_Send(0b00000000 | (add<<1));
 	RxData = SPI_Send(0x0);
 
-	SPI_Deselect(SPI_NSS_ACC);
-	return RxData;
+	SPI_Deselect(SPI_NSS_ACC);*/
+	for(i=0;i<5;i++)
+	{
+		SPI_Select(SPI_NSS_ACC);
+		acc_data[i] = SPI_Send(0b00000000 | (add<<1));
+		acc_data[i] = SPI_Send(0x0);
+		SPI_Deselect(SPI_NSS_ACC);
+	}
+	return (acc_data[0]+acc_data[1]+acc_data[2]+acc_data[3]+acc_data[4])/5;
 }
 
 void Accel_SetOffset(int16_t xoff, int16_t yoff, int16_t zoff)
@@ -109,7 +117,7 @@ void Accel_SetOffset(int16_t xoff, int16_t yoff, int16_t zoff)
 void Gyro_Init()
 {
 	while(Gyro_Read(WHO_AM_I) != 0xD4);
-	Gyro_Write(CTRL_REG4, 0b00110000);	//500dps
+	Gyro_Write(CTRL_REG4, 0b00000000);	//500dps
 	Gyro_Write(CTRL_REG1, 0x0F);
 }
 

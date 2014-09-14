@@ -53,6 +53,7 @@
 #define GyroZ_DATA		2
 #define GyroReadMode	0x80
 #define GyroAddIncMode	0x40
+#define GyroDPSRate		(0.00875)
 
 //グローバル関数・変数
 extern void		SPI_Configuration();
@@ -67,5 +68,8 @@ extern void		Gyro_Init();
 extern void		Gyro_Write(uint8_t add, uint8_t val);
 extern uint8_t	Gyro_Read(uint8_t add);
 extern int16_t	Gyro_ReadMultiByte(uint8_t add);
+
+//Accelerometer : MMA7455L
+//Gyroscope : L3GD20
 
 #endif /* SPI_H_ */

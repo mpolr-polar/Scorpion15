@@ -93,6 +93,25 @@ void USART_PutDec2(int16_t i)
 	USART_PutChar(i + '0');
 }
 
+void USART_PutDecEx(uint32_t i,uint8_t signed_flag,uint8_t digits)
+{
+	uint32_t out=0,j=0;
+	uint8_t flag=0;
+	if(signed_flag&(i&(1<<(digits-1)))){
+		out = -i;
+		USART_PutChar('-');
+	}else{
+		out = i;
+		USART_PutChar(' ');
+	}
+	for(j=1000000000;j>=1;j/=10){
+		out = i/j;
+		i%=j;
+		if(flag==0 && out!=0)flag=1;
+		if(flag==1 || out!=0)USART_PutChar(out+'0');
+	}
+}
+
 void USART_PutBin(const uint8_t bin)
 {
 	/* Wait while the buffer to send data is not empty */
@@ -131,4 +150,14 @@ void USART_PutHex(const uint8_t hex)
 	{
 		USART_PutChar(i+'a'-10);
 	}
+}
+
+void USART_PutDbl(const double num)
+{
+
+}
+
+void USART_PutDbl2(const double num)
+{
+
 }
